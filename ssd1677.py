@@ -178,9 +178,9 @@ class SSD1677(framebuf.FrameBuffer):
 
     def mark_dirty(self, x0, y0, x1, y1):
         """Manually mark a region (inclusive pixel coords) as needing a
-        partial refresh. Useful for drawing done via methods this driver
-        doesn't automatically track (e.g. poly()), or via direct buffer
-        manipulation."""
+        partial refresh. Useful for drawing done via direct buffer
+        manipulation rather than the usual framebuf drawing methods (which
+        are all tracked automatically)."""
         self._mark_dirty(x0, y0, x1, y1)
 
     def pixel(self, x, y, *args):
@@ -202,6 +202,28 @@ class SSD1677(framebuf.FrameBuffer):
     def rect(self, x, y, w, h, c, *args):
         self._mark_dirty(x, y, x + w - 1, y + h - 1)
         super().rect(x, y, w, h, c, *args)
+
+    def ellipse(self, x, y, xr, yr, c, *args):
+        self._mark_dirty(x - xr, y - yr, x + xr, y + yr)
+        super().ellipse(x, y, xr, yr, c, *args)
+
+    def poly(self, x, y, coords, c, *args):
+        n = len(coords)
+        if n >= 2:
+            min_x = max_x = coords[0]
+            min_y = max_y = coords[1]
+            for i in range(2, n - 1, 2):
+                px, py = coords[i], coords[i + 1]
+                if px < min_x:
+                    min_x = px
+                elif px > max_x:
+                    max_x = px
+                if py < min_y:
+                    min_y = py
+                elif py > max_y:
+                    max_y = py
+            self._mark_dirty(x + min_x, y + min_y, x + max_x, y + max_y)
+        super().poly(x, y, coords, c, *args)
 
     def fill_rect(self, x, y, w, h, c):
         self._mark_dirty(x, y, x + w - 1, y + h - 1)
