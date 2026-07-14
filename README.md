@@ -5,8 +5,20 @@ driver for the SSD1677 e-paper display controller, as used in 800x480
 monochrome panels such as the one in the [Xteink X4](https://www.xteink.com/products/xteink-x4)
 e-reader.
 
-Only full-refresh updates are currently supported. The panel also supports
-fast and partial refresh modes, but those aren't implemented yet.
+Three refresh modes are supported:
+- `show()` — full refresh (~1.6s). Slowest, but no ghosting; visibly flashes.
+- `show_partial()` — refreshes only the region changed since the last
+  `show*()` call (tracked automatically). Much quicker (~0.7s measured) and
+  low-flicker, but ghosting accumulates over repeated use.
+- `show_fast()` — full-screen refresh using the panel's alternate waveform.
+  On the Xteink X4 panel this measured about the same speed as `show()`
+  (~1.6s) — the expected speedup didn't show up on this particular panel's
+  OTP waveform table. `show_partial()` is the more reliable way to get a
+  snappier update; `show_fast()` is kept since it may behave differently on
+  other SSD1677 panels.
+
+Ghosting from `show_partial()`/`show_fast()` isn't cleared automatically —
+call `show()` periodically (e.g. every N partial updates) to reset it.
 
 ## Install
 
@@ -44,9 +56,6 @@ Color `1` draws black (ink), color `0` is white (background) — the driver
 handles the panel's own inverted RAM convention internally.
 
 No MISO connection is needed; this driver only ever writes to the panel.
-
-A full refresh (`show()`) takes roughly 1.6 seconds and will visibly flash
-the screen — this is normal for e-paper.
 
 There's no rotation support: the framebuffer is always in the panel's native
 800(w)x480(h) raster, regardless of how the panel is physically mounted in a
